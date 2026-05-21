@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Clients — AW Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Clients</h1>
+    <p class="page-subtitle">{{ clients|length }} client{{ 's' if clients|length != 1 else '' }} on retainer</p>
+  </div>
+  <a href="{{ url_for('client_new') }}" class="btn btn-primary">+ Add Client</a>
+</div>
+
+{% if clients %}
+<div class="card-grid">
+  {% for client in clients %}
+  <div class="client-card">
+    <div class="client-card-header">
+      <div class="client-avatar">{{ client.name1[0].upper() }}</div>
+      <div class="client-info">
+        <h2 class="client-name">{{ client.name1 }}{% if client.name2 %} &amp; {{ client.name2 }}{% endif %}</h2>
+        <span class="client-meta">
+          {% if client.last_report_date %}
+            Last report: {{ client.last_report_date }}
+          {% else %}
+            <span class="badge badge-warn">No reports yet</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+
+    <div class="client-stats">
+      <div class="stat">
+        <span class="stat-label">Monthly Inflow</span>
+        <span class="stat-value">${{ "{:,.0f}".format(client.monthly_salary) }}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Expense Budget</span>
+        <span class="stat-value">${{ "{:,.0f}".format(client.monthly_expense_budget) }}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Monthly Excess</span>
+        <span class="stat-value {% if client.monthly_salary - client.monthly_expense_budget > 0 %}positive{% endif %}">
+          ${{ "{:,.0f}".format(client.monthly_salary - client.monthly_expense_budget) }}
+        </span>
+      </div>
+    </div>
+
+    <div class="client-card-actions">
+      <a href="{{ url_for('report_new', client_id=client.id) }}" class="btn btn-primary btn-sm">Generate Report</a>
+      <a href="{{ url_for('client_edit', client_id=client.id) }}" class="btn btn-ghost btn-sm">Edit</a>
+      <form method="POST" action="{{ url_for('client_delete', client_id=client.id) }}"
+            onsubmit="return confirm('Delete {{ client.name1 }}? This removes all their reports.')">
+        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">👤</div>
+  <h2>No clients yet</h2>
+  <p>Add your first client to get started generating reports.</p>
+  <a href="{{ url_for('client_new') }}" class="btn btn-primary">Add First Client</a>
+</div>
+{% endif %}
+{% endblock %}

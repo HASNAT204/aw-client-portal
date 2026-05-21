@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}{{ report.quarter }} Report — {{ client.name1 }} — AW Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ report.quarter }} — {{ client.name1 }}{% if client.name2 %} &amp; {{ client.name2 }}{% endif %}</h1>
+    <p class="page-subtitle">Generated {{ report.report_date }}</p>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('report_new', client_id=client.id) }}" class="btn btn-ghost">+ New Report</a>
+    <a href="{{ url_for('client_edit', client_id=client.id) }}" class="btn btn-ghost">Edit Client</a>
+  </div>
+</div>
+
+<!-- Download Buttons -->
+<div class="download-bar">
+  <div class="download-bar-inner">
+    <span class="download-label">📄 Download Reports</span>
+    <a href="{{ url_for('pdf_sacs', report_id=report.id) }}" class="btn btn-primary">
+      ↓ SACS PDF
+    </a>
+    <a href="{{ url_for('pdf_tcc', report_id=report.id) }}" class="btn btn-primary">
+      ↓ TCC PDF
+    </a>
+  </div>
+</div>
+
+<div class="report-grid">
+  <!-- SACS Summary -->
+  <div class="report-card">
+    <h2 class="report-card-title green">SACS — Cash Flow</h2>
+    <div class="report-rows">
+      <div class="report-row">
+        <span class="report-row-label">Monthly Inflow</span>
+        <span class="report-row-value green">${{ "{:,.0f}".format(sacs.inflow) }}/mo</span>
+      </div>
+      <div class="report-row">
+        <span class="report-row-label">Monthly Outflow</span>
+        <span class="report-row-value red">${{ "{:,.0f}".format(sacs.outflow) }}/mo</span>
+      </div>
+      <div class="report-row highlight">
+        <span class="report-row-label">Monthly Excess → Private Reserve</span>
+        <span class="report-row-value blue">${{ "{:,.0f}".format(sacs.excess) }}/mo</span>
+      </div>
+      <div class="report-row">
+        <span class="report-row-label">Private Reserve Balance</span>
+        <span class="report-row-value">${{ "{:,.0f}".format(sacs.pr_balance) }}</span>
+      </div>
+      <div class="report-row">
+        <span class="report-row-label">Private Reserve Target</span>
+        <span class="report-row-value {% if sacs.pr_balance >= sacs.pr_target %}green{% else %}red{% endif %}">
+          ${{ "{:,.0f}".format(sacs.pr_target) }}
+          {% if sacs.pr_balance >= sacs.pr_target %}✓{% else %}↑ needed{% endif %}
+        </span>
+      </div>
+      <div class="report-row">
+        <span class="report-row-label">Schwab Investment Balance</span>
+        <span class="report-row-value">${{ "{:,.0f}".format(sacs.schwab_balance) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TCC Summary -->
+  <div class="report-card">
+    <h2 class="report-card-title blue">TCC — Net Worth</h2>
+    <div class="report-rows">
+      <div class="report-row">
+        <span class="report-row-label">{{ client.name1 }} Retirement Total</span>
+        <span class="report-row-value">${{ "{:,.0f}".format(tcc.client1_retirement_total) }}</span>
+      </div>
+      {% if client.name2 %}
+      <div class="report-row">
+        <span class="report-row-label">{{ client.name2 }} Retirement Total</span>
+        <span class="report-row-value">${{ "{:,.0f}".format(tcc.client2_retirement_total) }}</span>
+      </div>
+      {% endif %}
+      <div class="report-row">
+        <span class="report-row-label">Non-Retirement Total</span>
+        <span class="report-row-value">${{ "{:,.0f}".format(tcc.non_retirement_total) }}</span>
+      </div>
+      <div class="report-row">
+        <span class="report-row-label">Trust (Zillow Value)</span>
+        <span class="report-row-value">${{ "{:,.0f}".format(tcc.zillow_value) }}</span>
+      </div>
+      <div class="report-row highlight grand-total">
+        <span class="report-row-label">Grand Total Net Worth</span>
+        <span class="report-row-value blue bold">${{ "{:,.0f}".format(tcc.grand_total) }}</span>
+      </div>
+      <div class="report-row sep">
+        <span class="report-row-label">Liabilities Total <span class="badge-note">(not subtracted)</span></span>
+        <span class="report-row-value red">${{ "{:,.0f}".format(tcc.liabilities_total) }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Account Balances Detail -->
+<div class="form-section" style="margin-top:1.5rem">
+  <h2 class="section-title">Account Balances This Quarter</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Owner</th>
+        <th>Account Type</th>
+        <th>Last 4</th>
+        <th>Balance</th>
+        <th>Cash Balance</th>
+        <th>Rate</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in balances %}
+      <tr>
+        <td><span class="badge-cat {{ b.category }}">{{ b.category.replace('_', ' ').title() }}</span></td>
+        <td>{{ b.owner.replace('_', ' ').title() }}</td>
+        <td>{{ b.account_type }}</td>
+        <td>{% if b.account_last4 %}···· {{ b.account_last4 }}{% else %}—{% endif %}</td>
+        <td class="money">${{ "{:,.0f}".format(b.balance) }}</td>
+        <td class="money">{% if b.cash_balance > 0 %}${{ "{:,.0f}".format(b.cash_balance) }}{% else %}—{% endif %}</td>
+        <td>{% if b.interest_rate %}{{ "%.2f"|format(b.interest_rate) }}%{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Previous Reports -->
+{% if all_reports|length > 1 %}
+<div class="form-section" style="margin-top:1.5rem">
+  <h2 class="section-title">Report History</h2>
+  <table class="data-table">
+    <thead>
+      <tr><th>Quarter</th><th>Date</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for r in all_reports %}
+      <tr {% if r.id == report.id %}class="active-row"{% endif %}>
+        <td>{{ r.quarter }}</td>
+        <td>{{ r.report_date }}</td>
+        <td>
+          <a href="{{ url_for('report_detail', report_id=r.id) }}" class="btn btn-ghost btn-xs">View</a>
+          <a href="{{ url_for('pdf_sacs', report_id=r.id) }}" class="btn btn-ghost btn-xs">SACS↓</a>
+          <a href="{{ url_for('pdf_tcc', report_id=r.id) }}" class="btn btn-ghost btn-xs">TCC↓</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
