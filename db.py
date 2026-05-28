@@ -314,42 +314,100 @@ def calc_age(dob_str):
 
 
 def seed_demo_data():
-    """Insert the demo client on first boot if the database is empty."""
+    """Insert demo clients on first boot if the database is empty."""
     conn = get_db()
     count = conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
     conn.close()
     if count > 0:
         return
 
-    cid = create_client({
+    def _bal(accs, bal_map, cash_map=None):
+        return {
+            a["id"]: {
+                "balance": bal_map.get(a["account_type"], 0),
+                "cash_balance": (cash_map or {}).get(a["account_type"], 0),
+            }
+            for a in accs
+        }
+
+    # ── Client 1: John & Jane Smith — 3 quarters ─────────────────────────────
+    cid1 = create_client({
         "name1": "John Smith", "dob1": "1975-03-15", "ssn_last4_1": "4321",
         "name2": "Jane Smith", "dob2": "1978-07-22", "ssn_last4_2": "8765",
         "monthly_salary": 15000, "monthly_expense_budget": 11000,
         "deductible_car": 1000, "deductible_home": 2000, "deductible_health": 1000,
     })
-    replace_accounts(cid, [
-        {"owner": "client1", "category": "retirement",     "account_type": "IRA",             "account_last4": "1234", "interest_rate": "", "property_address": ""},
-        {"owner": "client1", "category": "retirement",     "account_type": "Roth IRA",        "account_last4": "5678", "interest_rate": "", "property_address": ""},
-        {"owner": "client2", "category": "retirement",     "account_type": "401k",            "account_last4": "9012", "interest_rate": "", "property_address": ""},
-        {"owner": "client2", "category": "retirement",     "account_type": "Pension",         "account_last4": "3456", "interest_rate": "", "property_address": ""},
-        {"owner": "joint",   "category": "non_retirement", "account_type": "Schwab Brokerage","account_last4": "7890", "interest_rate": "", "property_address": ""},
-        {"owner": "joint",   "category": "trust",          "account_type": "Family Trust",    "account_last4": "",     "interest_rate": "", "property_address": "123 Oak Lane, Atlanta GA 30301"},
+    replace_accounts(cid1, [
+        {"owner": "client1", "category": "retirement",     "account_type": "IRA",             "account_last4": "1234", "interest_rate": "",   "property_address": ""},
+        {"owner": "client1", "category": "retirement",     "account_type": "Roth IRA",        "account_last4": "5678", "interest_rate": "",   "property_address": ""},
+        {"owner": "client2", "category": "retirement",     "account_type": "401k",            "account_last4": "9012", "interest_rate": "",   "property_address": ""},
+        {"owner": "client2", "category": "retirement",     "account_type": "Pension",         "account_last4": "3456", "interest_rate": "",   "property_address": ""},
+        {"owner": "joint",   "category": "non_retirement", "account_type": "Schwab Brokerage","account_last4": "7890", "interest_rate": "",   "property_address": ""},
+        {"owner": "joint",   "category": "trust",          "account_type": "Family Trust",    "account_last4": "",     "interest_rate": "",   "property_address": "123 Oak Lane, Atlanta GA 30301"},
         {"owner": "joint",   "category": "liability",      "account_type": "Mortgage",        "account_last4": "2345", "interest_rate": 3.75, "property_address": ""},
         {"owner": "joint",   "category": "liability",      "account_type": "Auto Loan",       "account_last4": "6789", "interest_rate": 5.99, "property_address": ""},
     ])
-    accs = get_accounts(cid)
-    bal_map = {
-        "IRA": 18000, "Roth IRA": 50000, "401k": 42000, "Pension": 185000,
-        "Schwab Brokerage": 42000, "Family Trust": 0, "Mortgage": 15000, "Auto Loan": 26000,
-    }
-    balances = {
-        a["id"]: {
-            "balance": bal_map.get(a["account_type"], 0),
-            "cash_balance": 5000 if a["account_type"] == "Schwab Brokerage" else 0,
-        }
-        for a in accs
-    }
-    create_report(cid, {
-        "report_date": "2026-05-20", "quarter": "Q2 2026",
-        "private_reserve_balance": 75000, "schwab_balance": 50000, "zillow_value": 450000,
-    }, balances)
+    a1 = get_accounts(cid1)
+    create_report(cid1, {"report_date": "2025-12-31", "quarter": "Q4 2025",
+                         "private_reserve_balance": 68000, "schwab_balance": 44000, "zillow_value": 435000},
+                  _bal(a1, {"IRA": 15000, "Roth IRA": 44000, "401k": 38000, "Pension": 180000,
+                             "Schwab Brokerage": 38000, "Family Trust": 0, "Mortgage": 18000, "Auto Loan": 29000},
+                            {"Schwab Brokerage": 4000}))
+    create_report(cid1, {"report_date": "2026-03-31", "quarter": "Q1 2026",
+                         "private_reserve_balance": 71000, "schwab_balance": 47000, "zillow_value": 442000},
+                  _bal(a1, {"IRA": 16000, "Roth IRA": 47000, "401k": 40000, "Pension": 182000,
+                             "Schwab Brokerage": 40000, "Family Trust": 0, "Mortgage": 17000, "Auto Loan": 28000},
+                            {"Schwab Brokerage": 4500}))
+    create_report(cid1, {"report_date": "2026-05-20", "quarter": "Q2 2026",
+                         "private_reserve_balance": 75000, "schwab_balance": 50000, "zillow_value": 450000},
+                  _bal(a1, {"IRA": 18000, "Roth IRA": 50000, "401k": 42000, "Pension": 185000,
+                             "Schwab Brokerage": 42000, "Family Trust": 0, "Mortgage": 15000, "Auto Loan": 26000},
+                            {"Schwab Brokerage": 5000}))
+
+    # ── Client 2: Michael & Sarah Johnson — 2 quarters ───────────────────────
+    cid2 = create_client({
+        "name1": "Michael Johnson", "dob1": "1968-11-04", "ssn_last4_1": "7712",
+        "name2": "Sarah Johnson",   "dob2": "1971-02-18", "ssn_last4_2": "3389",
+        "monthly_salary": 18000, "monthly_expense_budget": 13500,
+        "deductible_car": 1500, "deductible_home": 3000, "deductible_health": 1500,
+    })
+    replace_accounts(cid2, [
+        {"owner": "client1", "category": "retirement",     "account_type": "Roth IRA",         "account_last4": "4512", "interest_rate": "",   "property_address": ""},
+        {"owner": "client1", "category": "retirement",     "account_type": "403b",              "account_last4": "7823", "interest_rate": "",   "property_address": ""},
+        {"owner": "client2", "category": "retirement",     "account_type": "IRA",               "account_last4": "3301", "interest_rate": "",   "property_address": ""},
+        {"owner": "client2", "category": "retirement",     "account_type": "SEP IRA",           "account_last4": "6644", "interest_rate": "",   "property_address": ""},
+        {"owner": "joint",   "category": "non_retirement", "account_type": "Schwab Brokerage",  "account_last4": "1122", "interest_rate": "",   "property_address": ""},
+        {"owner": "joint",   "category": "trust",          "account_type": "Real Estate Trust", "account_last4": "",     "interest_rate": "",   "property_address": "847 Peachtree Rd NE, Atlanta GA 30308"},
+        {"owner": "joint",   "category": "liability",      "account_type": "Mortgage",          "account_last4": "9901", "interest_rate": 4.25, "property_address": ""},
+        {"owner": "joint",   "category": "liability",      "account_type": "Home Equity Loan",  "account_last4": "5577", "interest_rate": 6.5,  "property_address": ""},
+    ])
+    a2 = get_accounts(cid2)
+    create_report(cid2, {"report_date": "2026-03-31", "quarter": "Q1 2026",
+                         "private_reserve_balance": 85000, "schwab_balance": 62000, "zillow_value": 520000},
+                  _bal(a2, {"Roth IRA": 65000, "403b": 95000, "IRA": 48000, "SEP IRA": 210000,
+                             "Schwab Brokerage": 55000, "Real Estate Trust": 0, "Mortgage": 22000, "Home Equity Loan": 35000},
+                            {"Schwab Brokerage": 6000}))
+    create_report(cid2, {"report_date": "2026-05-20", "quarter": "Q2 2026",
+                         "private_reserve_balance": 87000, "schwab_balance": 65000, "zillow_value": 525000},
+                  _bal(a2, {"Roth IRA": 67000, "403b": 98000, "IRA": 50000, "SEP IRA": 215000,
+                             "Schwab Brokerage": 58000, "Real Estate Trust": 0, "Mortgage": 21000, "Home Equity Loan": 34000},
+                            {"Schwab Brokerage": 6500}))
+
+    # ── Client 3: Robert Chen — single client, 1 quarter ─────────────────────
+    cid3 = create_client({
+        "name1": "Robert Chen", "dob1": "1982-06-30", "ssn_last4_1": "5521",
+        "name2": "", "dob2": "", "ssn_last4_2": "",
+        "monthly_salary": 12000, "monthly_expense_budget": 8500,
+        "deductible_car": 1000, "deductible_home": 0, "deductible_health": 2000,
+    })
+    replace_accounts(cid3, [
+        {"owner": "client1", "category": "retirement",     "account_type": "401k",            "account_last4": "2288", "interest_rate": "",  "property_address": ""},
+        {"owner": "client1", "category": "retirement",     "account_type": "Roth IRA",        "account_last4": "4490", "interest_rate": "",  "property_address": ""},
+        {"owner": "joint",   "category": "non_retirement", "account_type": "Schwab Brokerage","account_last4": "8871", "interest_rate": "",  "property_address": ""},
+        {"owner": "joint",   "category": "liability",      "account_type": "Auto Loan",       "account_last4": "3356", "interest_rate": 7.2, "property_address": ""},
+    ])
+    a3 = get_accounts(cid3)
+    create_report(cid3, {"report_date": "2026-05-20", "quarter": "Q2 2026",
+                         "private_reserve_balance": 48000, "schwab_balance": 32000, "zillow_value": 0},
+                  _bal(a3, {"401k": 88000, "Roth IRA": 34000, "Schwab Brokerage": 32000, "Auto Loan": 18000},
+                            {"Schwab Brokerage": 3000}))
