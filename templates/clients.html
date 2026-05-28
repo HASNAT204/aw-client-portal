@@ -47,6 +47,9 @@
 
     <div class="client-card-actions">
       <a href="{{ url_for('report_new', client_id=client.id) }}" class="btn btn-primary btn-sm">Generate Report</a>
+      {% if client.last_report_date %}
+      <a href="{{ url_for('client_reports', client_id=client.id) }}" class="btn btn-ghost btn-sm">View Reports</a>
+      {% endif %}
       <a href="{{ url_for('client_edit', client_id=client.id) }}" class="btn btn-ghost btn-sm">Edit</a>
       <form method="POST" action="{{ url_for('client_delete', client_id=client.id) }}"
             onsubmit="return confirm('Delete {{ client.name1 }}? This removes all their reports.')">

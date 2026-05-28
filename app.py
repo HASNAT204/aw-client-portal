@@ -87,6 +87,15 @@ def client_delete(client_id):
 
 # ── Reports ───────────────────────────────────────────────────────────────────
 
+@app.route("/clients/<int:client_id>/reports")
+def client_reports(client_id):
+    last = db.get_last_report(client_id)
+    if last:
+        return redirect(url_for("report_detail", report_id=last["id"]))
+    flash("No reports yet for this client.", "info")
+    return redirect(url_for("clients"))
+
+
 @app.route("/clients/<int:client_id>/report/new", methods=["GET", "POST"])
 def report_new(client_id):
     client = db.get_client(client_id)
